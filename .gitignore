@@ -1,3 +1,6 @@
+# DirEnv files
+.envrc
+
 # Pycharm IDE files
 .idea/
 
