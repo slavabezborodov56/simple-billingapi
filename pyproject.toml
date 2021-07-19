@@ -4,8 +4,12 @@ version = "0.1.0"
 description = "Simple Billing API"
 authors = ["Slava Bezborodov <slavabezborodov56@gmail.com>"]
 
+[tool.poetry.scripts]
+simple-billingapi = "simple_billingapi.cli:cli"
+
 [tool.poetry.dependencies]
 python = "^3.9"
+click = "^8.0.1"
 
 [tool.poetry.dev-dependencies]
 
