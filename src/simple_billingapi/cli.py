@@ -11,11 +11,13 @@ from simple_billingapi.web.routes import routes
 
 
 async def on_startup(app: web.Application) -> None:
-    app['postgres'] = await asyncpg.create_pool(os.getenv('POSTGRES_CONNECTION'))
+    pool: asyncpg.pool.Pool = await asyncpg.create_pool(os.getenv('POSTGRES_CONNECTION'))
+    app['postgres'] = pool
 
 
 async def on_shutdown(app: web.Application) -> None:
-    await asyncio.wait_for(app['postgres'].close(), timeout=10)
+    pool: asyncpg.pool.Pool = app['postgres']
+    await asyncio.wait_for(pool.close(), timeout=10)
 
 
 @click.group()
