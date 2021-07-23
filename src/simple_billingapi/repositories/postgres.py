@@ -41,15 +41,17 @@ async def user_create(phone: int, wallet_id: int, now: datetime, *, connection: 
     return new_user_id
 
 
-async def user_add_funds(user_id: int, amount: int, *, connection: Connection) -> Optional[int]:
+async def wallet_add(wallet_id: int, amount: int, *, connection: Connection) -> Optional[PgWallet]:
     query = """
-    UPDATE wallets SET amount = amount + $1 WHERE id = (
-        SELECT wallet_id FROM users WHERE users.id = $2
-    )
-    RETURNING wallets.id
+    UPDATE wallets SET amount = amount + $1 WHERE id = $2
+    RETURNING id, amount
     """
-    params = (amount, user_id)
-    return await connection.fetchval(query, *params)
+    params = (amount, wallet_id)
+    if row := await connection.fetchrow(query, *params):
+        return PgWallet(
+            id=row['id'],
+            amount=row['amount'],
+        )
 
 
 async def log_write(

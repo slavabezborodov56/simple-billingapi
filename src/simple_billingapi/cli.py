@@ -4,20 +4,18 @@ import os
 import asyncpg
 import click
 from aiohttp import web
-from aiohttp_swagger import setup_swagger
 
 from simple_billingapi import setup
-from simple_billingapi.web.routes import routes
+from simple_billingapi.web.middlewares import broken_rules_middleware, request_id_middleware
+from simple_billingapi.web.views.ping import PingView
+from simple_billingapi.web.views.users import UserCreateView
+from simple_billingapi.web.views.wallets import CreditFundsView, TransferFundsView
 
 
-async def on_startup(app: web.Application) -> None:
-    pool: asyncpg.pool.Pool = await asyncpg.create_pool(os.getenv('POSTGRES_CONNECTION'))
-    app['postgres'] = pool
-
-
-async def on_shutdown(app: web.Application) -> None:
-    pool: asyncpg.pool.Pool = app['postgres']
-    await asyncio.wait_for(pool.close(), timeout=10)
+async def pg_cleanup_ctx(app: web.Application):
+    app['postgres'] = await asyncpg.create_pool(os.getenv('POSTGRES_CONNECTION'))
+    yield
+    await asyncio.wait_for(app['postgres'].close(), timeout=10)
 
 
 @click.group()
@@ -30,9 +28,16 @@ def cli() -> None:
 @click.option('--host', type=str, default='127.0.0.1')
 @click.option('--port', type=int, default=8000)
 def serve(debug: bool, host: str, port: int) -> None:
-    app = web.Application(debug=debug)
-    app.on_startup.append(on_startup)
-    app.on_shutdown.append(on_shutdown)
-    app.add_routes(routes)
-    setup_swagger(app)
+    app = web.Application(
+        debug=debug,
+        middlewares=[
+            broken_rules_middleware,
+            request_id_middleware,
+        ],
+    )
+    app.router.add_view('/ping/', PingView)
+    app.router.add_view('/public/v1/create-user/', UserCreateView)
+    app.router.add_view('/public/v1/credit-funds/', CreditFundsView)
+    app.router.add_view('/public/v1/transfer-funds/', TransferFundsView)
+    app.cleanup_ctx.append(pg_cleanup_ctx)
     web.run_app(app, host=host, port=port)
