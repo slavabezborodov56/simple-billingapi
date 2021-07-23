@@ -1,5 +1,3 @@
-create database billing;
-
 create table wallets
 (
 	id serial not null
